@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils import rnn
+from warpctc_pytorch import CTCLoss
 
 
 class CNN(nn.Module):
@@ -19,7 +20,7 @@ class DenseLayer(nn.Module):
         super(DenseLayer, self).__init__()
         self.bn = nn.BatchNorm1d(num_features=input_size)
         self.fc = nn.Linear(input_size, output_size, bias=False)
-    
+
     def forward(self, padded_output):
         longest_length = padded_output.size(0)
         batch_size = padded_output.size(1)
@@ -31,7 +32,7 @@ class DenseLayer(nn.Module):
 
 
 class PackedLanguageModel(nn.Module):
-    
+
     def __init__(self, class_size, input_size, hidden_size, nlayers):
         super(PackedLanguageModel, self).__init__()
         self.hidden_size = hidden_size
@@ -64,5 +65,18 @@ class PackedLanguageModel(nn.Module):
         print("score", score.shape)
 
         return score
+
+class CTCCriterion(CTCLoss):
+    def forward(self, prediction, target):
+        acts = prediction[0]
+        act_lens = prediction[1].int()
+        label_lens = prediction[2].int()
+        labels = (target + 1).view(-1).int()
+        return super(CTCCriterion, self).forward(
+                acts=acts,
+                labels=labels.cpu(),
+                act_lens=act_lens.cpu(),
+                label_lens=label_lens.cpu()
+                )
 
 
