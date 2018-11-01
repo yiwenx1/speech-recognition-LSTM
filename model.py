@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils import rnn
-from warpctc_pytorch import CTCLoss
 
 
 class CNN(nn.Module):
@@ -38,45 +37,30 @@ class PackedLanguageModel(nn.Module):
         self.hidden_size = hidden_size
         self.nlayers = nlayers
         self.rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=nlayers, bidirectional=True)
-        # self.fc = nn.Linear(hidden_size, class_size)
         self.dense_layer = DenseLayer(hidden_size, class_size)
 
     def forward(self, utterance_list):
         batch_size = len(utterance_list)
-        lens = [len(utterance) for utterance in utterance_list]
+        inputs_length = [len(utterance) for utterance in utterance_list]
 
         # Packs a list of variable length Tensors.
         packed_input = rnn.pack_sequence(utterance_list)
-        print("packed_input:", packed_input.data.shape)
+        # print("packed_input:", packed_input.data.shape)
         hidden = None
         packed_output, hidden = self.rnn(packed_input, hidden)
-        # padded_output dimension: longest_length * batch_size * (2*hidden_size)
+        # padded_output: longest_length * batch_size * (2*hidden_size)
         padded_output, _ = rnn.pad_packed_sequence(packed_output) # unpack output (padded)
 
         longest_length = padded_output.size(0)
-        # padded_output dimension: longest_length * batch_size * hidden_size
+        # padded_output: longest_length * batch_size * hidden_size
         padded_output = padded_output.view(longest_length, batch_size, 2, -1).sum(2).view(longest_length, batch_size, -1)
-        print("padded_output", padded_output.shape)
+        # print("padded_output", padded_output.shape)
 
-        # output_flatten = torch.cat([padded_output[:lens[i],i] for i in range(batch_size)])
-        # print("output_flatted", output_flatten.shape)
-
+        # score: longest_length * batch_size * class_size
         score = self.dense_layer(padded_output)
-        print("score", score.shape)
+        # print("score", score.shape)
 
-        return score
+        return score, inputs_length
 
-class CTCCriterion(CTCLoss):
-    def forward(self, prediction, target):
-        acts = prediction[0]
-        act_lens = prediction[1].int()
-        label_lens = prediction[2].int()
-        labels = (target + 1).view(-1).int()
-        return super(CTCCriterion, self).forward(
-                acts=acts,
-                labels=labels.cpu(),
-                act_lens=act_lens.cpu(),
-                label_lens=label_lens.cpu()
-                )
 
 

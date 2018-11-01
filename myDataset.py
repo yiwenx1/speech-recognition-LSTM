@@ -19,12 +19,19 @@ class myDataset(Dataset):
         return torch.from_numpy(inputs).to(DEVICE), torch.from_numpy(labels).to(DEVICE)
 
 def collate(utterance_list):
+    batch_size = len(utterance_list)
     inputs, targets = zip(*utterance_list)
     lens = [len(utterance) for utterance in inputs]
+    # index order
     utterance_order = sorted(range(len(lens)), key=lens.__getitem__, reverse=True)
     inputs = [inputs[i] for i in utterance_order]
     targets = [targets[i] for i in utterance_order]
-    return inputs, targets
+
+    targets_size = torch.IntTensor(batch_size)
+    for i in range(batch_size):
+        targets_size[i] = len(targets[i])
+    
+    return inputs, targets, targets_size
 
 if __name__ == '__main__':
     train_path = "./data/wsj0_train.npy"
@@ -32,7 +39,8 @@ if __name__ == '__main__':
     train_dataset = myDataset(train_path, label_path)
     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False, collate_fn=collate)
 
-    for i, (inputs, targets) in enumerate(train_loader):
+    for i, (inputs, targets, targets_size) in enumerate(train_loader):
         if i == 0:
             print(len(inputs), inputs[0].shape, inputs[1].shape)
-            print(len(targets), len(targets[0]), len(targets[1]))
+            print(len(targets), targets[0].shape, targets[1].shape)
+            print(targets_size)
