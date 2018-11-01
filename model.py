@@ -42,6 +42,7 @@ class PackedLanguageModel(nn.Module):
     def forward(self, utterance_list):
         batch_size = len(utterance_list)
         inputs_length = [len(utterance) for utterance in utterance_list]
+        inputs_length = torch.IntTensor(inputs_length)
 
         # Packs a list of variable length Tensors.
         packed_input = rnn.pack_sequence(utterance_list)

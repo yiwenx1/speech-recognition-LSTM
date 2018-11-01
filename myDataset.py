@@ -9,7 +9,7 @@ class myDataset(Dataset):
     def __init__(self, train_path, label_path):
         self.train_data = np.load(train_path, encoding="bytes")
         self.label = np.load(label_path, encoding="bytes")
-    
+
     def __len__(self):
         return len(self.train_data)
 
@@ -27,11 +27,16 @@ def collate(utterance_list):
     inputs = [inputs[i] for i in utterance_order]
     targets = [targets[i] for i in utterance_order]
 
+    out_targets = []
     targets_size = torch.IntTensor(batch_size)
     for i in range(batch_size):
+        if i == 0:
+            out_targets = targets[i]
+        else:
+            out_targets = torch.cat((out_targets, targets[i]))
         targets_size[i] = len(targets[i])
-    
-    return inputs, targets, targets_size
+
+    return inputs, out_targets, targets_size
 
 if __name__ == '__main__':
     train_path = "./data/wsj0_train.npy"
