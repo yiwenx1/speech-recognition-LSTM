@@ -3,9 +3,11 @@ import torch
 from torch.utils.data import DataLoader
 from warpctc_pytorch import CTCLoss
 import argparse
+import torch.nn as nn
+import os
 
 from myDataset import myDataset, collate
-from model import PackedLanguageModel, ER
+from model import PackedLanguageModel, ER, ER_test
 from data.phoneme_list import N_PHONEMES
 from config import MODEL_CONFIG as MC
 
@@ -38,6 +40,21 @@ def eval(dev_loader, model, epoch):
         error = error_rate_op(outputs.to("cpu"), targets.to("cpu"), outputs_size.to("cpu"), targets_size)
         print(error)
     return error
+
+def test(test_loader, model, path_name):
+    error_rate_op = ER_test()
+    predictions = []
+    for i, (inputs, targets, targets_size) in enumerate(test_loader):
+        outputs, outputs_size = model(inputs)
+        targets = targets.to(torch.int32)
+        prediction = error_rate_op(outputs.to("cpu"), targets.to("cpu"), outputs_size.to("cpu"),targets_size)
+        predictions.append(prediction)
+        print(prediction)
+
+    with open(path_name, 'w') as f:
+        for i in range(len(predictions)):
+            f.write(str(i) + "," + predictions[i] + "\n")
+
 
 def save_model(epoch, model, optimizer, loss, step, save_path):
     filename = save_path + str(epoch) + '-' + str(step) + '-' + "%.6f" % loss.item() + '.pth'
@@ -74,12 +91,14 @@ def main(args):
     dev_path = "./data/wsj0_dev.npy"
     dev_label_path = "./data/wsj0_dev_merged_labels.npy"
     dev_dataset = myDataset(dev_path, dev_label_path)
-    dev_loader = DataLoader(dev_dataset, batch_size=2, shuffle=False, collate_fn=collate)
+    dev_loader = DataLoader(dev_dataset, batch_size=32, shuffle=False, collate_fn=collate)
 
     test_path = "./data/wsj0_test.npy"
-
+    test_dataset = myDataset(test_path, dev_label_path)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, collate_fn=collate)
 
     model = PackedLanguageModel(N_PHONEMES, 40, MC["hidden_size"], MC["nlayers"])
+    model = nn.DataParallel(model)
     model = model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=MC["lr"], weight_decay=1e-6)
     ctc = CTCLoss()
@@ -91,20 +110,21 @@ def main(args):
             args.load_loss,
             model,
             optimizer,
-            args.weights_path
+            "./weights/"
         )
 
     nepochs = args.epochs
     for epoch in range(start_epoch, nepochs):
-        model.train()
-        train(train_loader, model, optimizer, ctc, epoch)
+        # model.train()
+        # train(train_loader, model, optimizer, ctc, epoch)
         model.eval()
         with torch.no_grad():
             error = eval(dev_loader, model, epoch)
+    test(test_loader, model, "submission.csv")
 
 def arguments():
     parser = argparse.ArgumentParser(description="Speaker Verificiation via CNN")
-    parser.add_argument('--epochs', type=int, default=27, metavar='E',
+    parser.add_argument('--epochs', type=int, default=30, metavar='E',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--weight-decay', type=float, default=0.001,
                         help='L2 regularization')

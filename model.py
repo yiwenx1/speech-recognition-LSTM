@@ -7,6 +7,8 @@ import Levenshtein as L
 
 from data.phoneme_list import PHONEME_MAP
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 class CNN(nn.Module):
     def __init__(self):
         self.embed = nn.Sequential(
@@ -78,7 +80,7 @@ class ER():
     def forward(self, outputs, targets, outputs_size, targets_size):
         outputs = torch.transpose(outputs, 0, 1)
         probs = F.softmax(outputs, dim=2) # outputs: batch_size * seq_len * 47
-        print(outputs_size)
+        # print(outputs_size)
         output, scores, timesteps, out_seq_len = self.decoder.decode(probs=probs, seq_lens=outputs_size)
         pos = 0
         ls = 0
@@ -94,4 +96,21 @@ class ER():
         return ls / output.size(0)
 
 
+class ER_test():
+    def __init__(self):
+        self.label_map = [' '] + PHONEME_MAP
+        self.decoder = CTCBeamDecoder(labels=self.label_map, blank_id=0)
 
+    def __call__(self, outputs, targets, outputs_size, targets_size):
+        return self.forward(outputs, targets, outputs_size, targets_size)
+
+    def forward(self, outputs, targets, outputs_size, targets_size):
+        outputs = torch.transpose(outputs, 0, 1)
+        probs = F.softmax(outputs, dim=2) # outputs: batch_size * seq_len * 47
+        print(outputs_size)
+        output, scores, timesteps, out_seq_len = self.decoder.decode(probs=probs, seq_lens=outputs_size)
+        for i in range(output.size(0)):
+            pred = "".join(self.label_map[o] for o in output[i, 0, :out_seq_len[i, 0]])
+            print("pred {}".format(pred))
+            print("pred {}".format(len(pred)))
+        return pred

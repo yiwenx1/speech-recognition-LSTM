@@ -40,18 +40,19 @@ def collate(utterance_list):
     return inputs, out_targets, targets_size
 
 if __name__ == '__main__':
-    train_path = "./data/wsj0_train.npy"
-    label_path = "./data/wsj0_train_merged_labels.npy"
-    train_dataset = myDataset(train_path, label_path)
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False, collate_fn=collate)
-    dev_path = "./data/wsj0_dev.npy"
+    # train_path = "./data/wsj0_train.npy"
+    # label_path = "./data/wsj0_train_merged_labels.npy"
+    # train_dataset = myDataset(train_path, label_path)
+    # train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False, collate_fn=collate)
+    # dev_path = "./data/wsj0_dev.npy"
     dev_label_path = "./data/wsj0_dev_merged_labels.npy"
-    dev_dataset = myDataset(dev_path, dev_label_path)
-    print(dev_dataset.__len__())
+    # dev_dataset = myDataset(dev_path, dev_label_path)
 
-    print(train_loader.dataset.__len__())
-    for i, (inputs, targets, targets_size) in enumerate(train_loader):
+    test_path = "./data/wsj0_test.npy"
+    test_dataset = myDataset(test_path, dev_label_path)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, collate_fn=collate)
+
+    print(test_dataset.__len__())
+    for i, (inputs, targets, targets_size) in enumerate(test_loader):
         if i == 0:
-            print(len(inputs), inputs[0].shape, inputs[1].shape)
-            print(len(targets), targets[0].shape, targets[1].shape)
-            print(targets_size)
+            print(len(inputs), inputs[0].shape)
