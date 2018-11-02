@@ -1,7 +1,11 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils import rnn
+from ctcdecode import CTCBeamDecoder
+import torch.nn.functional as F
+import Levenshtein as L
 
+from data.phoneme_list import PHONEME_MAP
 
 class CNN(nn.Module):
     def __init__(self):
@@ -37,7 +41,7 @@ class PackedLanguageModel(nn.Module):
         self.hidden_size = hidden_size
         self.nlayers = nlayers
         self.rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=nlayers, bidirectional=True)
-        self.dense_layer = DenseLayer(hidden_size, class_size)
+        self.dense_layer = DenseLayer(hidden_size, class_size + 1)
 
     def forward(self, utterance_list):
         batch_size = len(utterance_list)
@@ -62,6 +66,32 @@ class PackedLanguageModel(nn.Module):
         # print("score", score.shape)
 
         return score, inputs_length
+
+class ER():
+    def __init__(self):
+        self.label_map = [' '] + PHONEME_MAP
+        self.decoder = CTCBeamDecoder(labels=self.label_map, blank_id=0)
+
+    def __call__(self, outputs, targets, outputs_size, targets_size):
+        return self.forward(outputs, targets, outputs_size, targets_size)
+
+    def forward(self, outputs, targets, outputs_size, targets_size):
+        outputs = torch.transpose(outputs, 0, 1)
+        probs = F.softmax(outputs, dim=2) # outputs: batch_size * seq_len * 47
+        print(outputs_size)
+        output, scores, timesteps, out_seq_len = self.decoder.decode(probs=probs, seq_lens=outputs_size)
+        pos = 0
+        ls = 0
+        print(targets_size)
+        for i in range(output.size(0)):
+            pred = "".join(self.label_map[o] for o in output[i, 0, :out_seq_len[i, 0]])
+            true = "".join(self.label_map[l] for l in targets[pos:pos + targets_size[i]])
+            print("pred {}\ntarget {}".format(pred, true))
+            pos += targets_size[i]
+            print("pred {} true {}".format(len(pred),len(true)))
+            ls += L.distance(pred, true)
+        assert pos == targets.size(0)
+        return ls / output.size(0)
 
 
 

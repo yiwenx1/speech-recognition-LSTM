@@ -16,6 +16,7 @@ class myDataset(Dataset):
     def __getitem__(self, i):
         inputs = self.train_data[i]
         labels = self.label[i]
+        labels = np.add(labels, 1)
         return torch.from_numpy(inputs).to(DEVICE), torch.from_numpy(labels).to(DEVICE)
 
 def collate(utterance_list):
@@ -43,7 +44,12 @@ if __name__ == '__main__':
     label_path = "./data/wsj0_train_merged_labels.npy"
     train_dataset = myDataset(train_path, label_path)
     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False, collate_fn=collate)
+    dev_path = "./data/wsj0_dev.npy"
+    dev_label_path = "./data/wsj0_dev_merged_labels.npy"
+    dev_dataset = myDataset(dev_path, dev_label_path)
+    print(dev_dataset.__len__())
 
+    print(train_loader.dataset.__len__())
     for i, (inputs, targets, targets_size) in enumerate(train_loader):
         if i == 0:
             print(len(inputs), inputs[0].shape, inputs[1].shape)

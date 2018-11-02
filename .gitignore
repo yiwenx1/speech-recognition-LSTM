@@ -4,3 +4,4 @@ randn.py
 data/
 *.pdf
 weights/
+*.pth
