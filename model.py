@@ -42,7 +42,7 @@ class PackedLanguageModel(nn.Module):
         super(PackedLanguageModel, self).__init__()
         self.hidden_size = hidden_size
         self.nlayers = nlayers
-        self.rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=nlayers, bidirectional=True)
+        self.rnn = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=nlayers, bidirectional=True)
         self.dense_layer = DenseLayer(hidden_size, class_size + 1)
 
     def forward(self, utterance_list):

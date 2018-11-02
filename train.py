@@ -14,6 +14,7 @@ from config import MODEL_CONFIG as MC
 def train(train_loader, model, optimizer, ctc, epoch):
     loss_sum = 0
     for i, (inputs, targets, targets_size) in enumerate(train_loader):
+        torch.cuda.empty_cache()
         optimizer.zero_grad()
         # print("inputs:", len(inputs), inputs[0].shape, inputs[1].shape)
         # outputs: # longest_length * batch_size * nclasses
@@ -115,11 +116,12 @@ def main(args):
 
     nepochs = args.epochs
     for epoch in range(start_epoch, nepochs):
-        # model.train()
-        # train(train_loader, model, optimizer, ctc, epoch)
-        model.eval()
-        with torch.no_grad():
-            error = eval(dev_loader, model, epoch)
+        model.train()
+        train(train_loader, model, optimizer, ctc, epoch)
+        if (epoch+1) % 10 == 0:
+            model.eval()
+            with torch.no_grad():
+                error = eval(dev_loader, model, epoch)
     test(test_loader, model, "submission.csv")
 
 def arguments():
