@@ -118,11 +118,11 @@ def main(args):
     for epoch in range(start_epoch, nepochs):
         model.train()
         train(train_loader, model, optimizer, ctc, epoch)
-        if (epoch+1) % 10 == 0:
-            model.eval()
-            with torch.no_grad():
-                error = eval(dev_loader, model, epoch)
-    test(test_loader, model, "submission.csv")
+        # if (epoch+1) % 10 == 0:
+            # model.eval()
+            # with torch.no_grad():
+                # error = eval(dev_loader, model, epoch)
+    test(test_loader, model, "submission_10.csv")
 
 def arguments():
     parser = argparse.ArgumentParser(description="Speaker Verificiation via CNN")
